@@ -94,9 +94,6 @@ SchwarzBase<ValueType, IndexType, MixedValueType>::SchwarzBase(
         int num_devices = 0;
 #if SCHW_HAVE_CUDA
         SCHWARZ_ASSERT_NO_CUDA_ERRORS(cudaGetDeviceCount(&num_devices));
-#else
-        SCHWARZ_NOT_IMPLEMENTED;
-#endif
         Utils<ValueType, IndexType>::assert_correct_cuda_devices(
             num_devices, metadata.my_rank);
         settings.executor = gko::CudaExecutor::create(
@@ -114,6 +111,9 @@ SchwarzBase<ValueType, IndexType, MixedValueType>::SchwarzBase(
                          ->get_device_id()
                   << " id of gpu" << std::endl;
         MPI_Barrier(metadata.mpi_communicator);
+#else
+        SCHWARZ_NOT_IMPLEMENTED;
+#endif
     } else if (settings.executor_string == "reference") {
         settings.executor = gko::ReferenceExecutor::create();
         auto exec_info =
@@ -167,7 +167,7 @@ void SchwarzBase<ValueType, IndexType, MixedValueType>::initialize(
 
     // Setup the right hand side vector.
     std::vector<ValueType> rhs(metadata.global_size, 1.0);
-    if (metadata.my_rank == 0 && settings.explicit_laplacian) {
+    if (metadata.my_rank == 0) {
         if (settings.rhs_type == "random") {
             Initialize<ValueType, IndexType>::generate_rhs(rhs);
             std::cout << "Random rhs." << std::endl;
@@ -177,6 +177,10 @@ void SchwarzBase<ValueType, IndexType, MixedValueType>::initialize(
         } else if (settings.rhs_type == "dipole") {
             Initialize<ValueType, IndexType>::generate_dipole_rhs(rhs);
             std::cout << "Dipole rhs." << std::endl;
+        } else if (settings.rhs_type == "custom") {
+            Initialize<ValueType, IndexType>::read_rhs(settings.rhs_filename,
+                                                       rhs);
+            std::cout << "Custom rhs from file. " << std::endl;
         } else {
             std::cout << "Default rhs with ones." << std::endl;
         }
@@ -512,24 +516,26 @@ void SchwarzBase<ValueType, IndexType, MixedValueType>::run(
 
     int total_events = 0;
 
-    // Printing msg count
-    if (settings.debug_print) {
-        for (int k = 0; k < num_neighbors_out; k++) {
-            std::cout << " Rank: " << metadata.my_rank << " to "
-                      << neighbors_out[k] << " : "
-                      << this->comm_struct.msg_count->get_data()[k];
+    if (settings.comm_settings.enable_onesided) {
+        // Printing msg count
+        if (settings.debug_print) {
+            for (int k = 0; k < num_neighbors_out; k++) {
+                std::cout << " Rank: " << metadata.my_rank << " to "
+                          << neighbors_out[k] << " : "
+                          << this->comm_struct.msg_count->get_data()[k];
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
-    }
-    for (int k = 0; k < num_neighbors_out; k++) {
-        total_events += this->comm_struct.msg_count->get_data()[k];
-    }
+        for (int k = 0; k < num_neighbors_out; k++) {
+            total_events += this->comm_struct.msg_count->get_data()[k];
+        }
 
-    // Total no of messages in all PEs
-    MPI_Allreduce(MPI_IN_PLACE, &total_events, 1, MPI_INT, MPI_SUM,
-                  MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE, &noevent_msg_count, 1, MPI_INT, MPI_SUM,
-                  MPI_COMM_WORLD);
+        // Total no of messages in all PEs
+        MPI_Allreduce(MPI_IN_PLACE, &total_events, 1, MPI_INT, MPI_SUM,
+                      MPI_COMM_WORLD);
+        MPI_Allreduce(MPI_IN_PLACE, &noevent_msg_count, 1, MPI_INT, MPI_SUM,
+                      MPI_COMM_WORLD);
+    }  // end onesided
 
     if (metadata.my_rank == 0) {
         std::cout << "Total number of events - " << total_events << std::endl;
