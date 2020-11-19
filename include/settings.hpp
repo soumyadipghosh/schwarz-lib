@@ -113,6 +113,11 @@ struct Settings {
     std::string matrix_filename = "null";
 
     /**
+     * The string that contains the rhs file name to read from .
+     */
+    std::string rhs_filename = "null";
+
+    /**
      * Flag if the laplacian matrix should be generated within the library. If
      * false, an external matrix and rhs needs to be provided
      */

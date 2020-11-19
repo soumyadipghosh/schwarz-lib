@@ -116,6 +116,7 @@ void BenchRas<ValueType, IndexType>::solve(MPI_Comm mpi_communicator)
     settings.restart_iter = FLAGS_restart_iter;
     metadata.precond_max_block_size = FLAGS_precond_max_block_size;
     settings.matrix_filename = FLAGS_matrix_filename;
+    settings.rhs_filename = FLAGS_rhs_filename;
     settings.explicit_laplacian = FLAGS_explicit_laplacian;
     settings.rhs_type = FLAGS_rhs_type;
     settings.enable_random_rhs = FLAGS_enable_random_rhs;
