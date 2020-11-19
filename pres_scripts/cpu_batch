@@ -1,0 +1,69 @@
+#!/bin/bash
+
+NUM_NODES=$1
+NUM_PROCS=$2
+COMM_TYPE="$3"
+EXEC="$4"
+NUM_ITERS=$5
+LOCAL_SOLVE="$6"
+PARTITION="$7"
+PARAM=$8
+RUN=${9}
+
+NUM_RANKS_PER_PROC=1
+
+PARENT_DIR="$(dirname $PWD)"
+EXEC_DIR=$PWD
+EXEC_TYPE_DIR="${EXEC}"
+
+mkdir -p $EXEC_TYPE_DIR
+
+RESULTS_DIR=${EXEC_DIR}/${EXEC_TYPE_DIR}
+
+cd $RESULTS_DIR
+
+COMM_TYPE_FLAG="--enable_${COMM_TYPE}"
+COMM_TYPE_DIR="${COMM_TYPE}"
+OUT_DIR="${NUM_PROCS}domains"
+LOCAL_SOLVE_DIR="${LOCAL_SOLVE}"
+PARTITION_DIR="${PARTITION}"
+JOB_NAME="pres-${PARAM}-${RUN}"
+TIME_FILE="subd"
+PARAM_DIR="Param=${PARAM}"
+RUN_DIR="Run_No=${RUN}"
+
+mkdir -p $COMM_TYPE_DIR
+cd $COMM_TYPE_DIR
+
+mkdir -p $OUT_DIR
+cd $OUT_DIR
+
+mkdir -p $LOCAL_SOLVE_DIR
+cd $LOCAL_SOLVE_DIR
+
+mkdir -p $PARTITION_DIR
+cd $PARTITION_DIR
+
+mkdir -p $PARAM_DIR
+cd $PARAM_DIR
+
+mkdir -p $RUN_DIR
+cd $RUN_DIR
+
+export run_exec=$PARENT_DIR/build/benchmarking/bench_ras
+export run_flags="--executor=${EXEC} --num_iters=${NUM_ITERS} --set_tol=1e-6 --local_tol=1e-12 --partition=${PARTITION} --local_solver=${LOCAL_SOLVE} --matrix_filename="/afs/crc.nd.edu/user/s/sghosh2/Public/pressure/schwarz-lib/data/mat100.mm" --rhs_type=custom --rhs_filename="/afs/crc.nd.edu/user/s/sghosh2/Public/pressure/schwarz-lib/data/rhs100.dat" --overlap=2 ${COMM_TYPE_FLAG} --enable_global_check --non_symmetric_matrix --debug_print" # --flush_type=flush-local --lock_type=lock-local --enable_put_all_local_residual_norms --remote_comm_type=put --comm_start_iters=20 --thres_type=slope --horizon=1 --decay_param=${PARAM} --sent_history=2 --recv_history=2 --event_log_print" 
+
+NUM_PE_NODES="$((${NUM_NODES}*48))"
+PE_PER_NODE="$((${NUM_PROCS}/${NUM_NODES}))"
+echo "#!/bin/csh" > job_script.sh
+echo "#$ -pe mpi-48 ${NUM_PE_NODES}" >> job_script.sh
+echo "#$ -q hpc" >> job_script.sh
+echo "#$ -N ${JOB_NAME}" >> job_script.sh
+echo "#$ -o info" >> job_script.sh
+
+echo "module load ompi/4.0.1/gcc/8.3.0" >> job_script.sh
+#echo "module load mpich/3.3/gcc/8.3.0" >> job_script.sh
+#echo "module load mvapich2/2.3.1/gcc/8.3.0" >> job_script.sh
+#echo "mpirun -N $PE_PER_NODE $run_exec $run_flags > out.txt" >> job_script.sh
+echo "mpirun -np $NUM_PROCS $run_exec $run_flags > out.txt" >> job_script.sh
+qsub job_script.sh
