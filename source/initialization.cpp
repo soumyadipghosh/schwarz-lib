@@ -132,6 +132,33 @@ void Initialize<ValueType, IndexType>::generate_sin_rhs(
     }
 }
 
+template <typename ValueType, typename IndexType>
+void Initialize<ValueType, IndexType>::read_rhs(const std::string &filename,
+                                                std::vector<ValueType> &rhs)
+{
+    using index_type = IndexType;
+    using value_type = ValueType;
+
+    auto input_file = std::ifstream(filename, std::ios::in);
+    if (!input_file) {
+        std::cerr << "Could not find the file \"" << filename
+                  << "\", which is required for this test.\n";
+    } else {
+        ValueType value;
+        int count = 1;
+        while (input_file >> value) {
+            if (count % 2 == 0) rhs[count / 2 - 1] = value;
+            count++;
+        }
+        /*
+        int szv = rhs.size();
+        for (int i = 0; i < szv; i++) std::cout << rhs[i] << std::endl;
+        */
+    }
+
+    std::cout << "Rhs from file " << filename << std::endl;
+}
+
 #if SCHW_HAVE_DEALII
 template <typename ValueType, typename IndexType>
 void Initialize<ValueType, IndexType>::setup_global_matrix(

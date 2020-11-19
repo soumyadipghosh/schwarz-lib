@@ -106,6 +106,13 @@ public:
     void generate_sin_rhs(std::vector<ValueType> &rhs);
 
     /**
+     * Read a right hand side vector from file
+     *
+     * @param rhs The rhs vector.
+     */
+    void read_rhs(const std::string &filename, std::vector<ValueType> &rhs);
+
+    /**
      * Generates the 2D global laplacian matrix.
      *
      * @param oned_laplacian_size  The size of the one d laplacian grid.
