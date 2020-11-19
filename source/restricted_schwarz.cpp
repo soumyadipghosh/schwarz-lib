@@ -986,6 +986,8 @@ void exchange_boundary_onesided(
             }              // end for (iterating over neighbors)
         }                  // end if-else one by one
 
+        if (settings.debug_print && settings.event_log_print) fps << std::endl;
+
         if (settings.use_mixed_precision) {
             mixedt_recv_buffer->convert_to(gko::lend(recv_buffer));
         }
